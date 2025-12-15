@@ -1,0 +1,7 @@
+{
+  "name": "NeuFocus 任务管理器",
+  "description": "一个精美的新拟物化设计待办事项应用，具有详细的时间跟踪和智能空闲检测功能。",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
