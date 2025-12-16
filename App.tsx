@@ -3,7 +3,7 @@ import { Task, TaskStatus, Settings, FilterState, Priority, STATUS_LABELS, PRIOR
 import TaskItem from './components/TaskItem';
 import TaskForm from './components/TaskForm';
 import { NeuButton, NeuInput, NeuCard, NeuSelect } from './components/NeuComponents';
-import { Plus, Settings as SettingsIcon, Bell, Search, Filter, BellRing, BellOff } from 'lucide-react';
+import { Plus, Settings as SettingsIcon, Bell, Search, Filter, BellRing, BellOff, Download, Upload } from 'lucide-react';
 
 const STORAGE_KEY_TASKS = 'neu-focus-tasks';
 const STORAGE_KEY_SETTINGS = 'neu-focus-settings';
@@ -93,6 +93,57 @@ const App: React.FC = () => {
         }
       });
     }
+  };
+
+  // --- Import / Export ---
+  const handleExportData = () => {
+    const data = {
+      tasks,
+      settings,
+      filters, // Optional
+      timestamp: Date.now(),
+      version: '1.0'
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `neufocus-data-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const data = JSON.parse(content);
+        
+        // Basic validation
+        if (data.tasks && Array.isArray(data.tasks)) {
+          if (window.confirm(`确认导入数据？\n这将覆盖当前 ${tasks.length} 个任务，并替换为导入的 ${data.tasks.length} 个任务。`)) {
+             setTasks(data.tasks);
+             if (data.settings) setSettings(data.settings);
+             // We don't necessarily override filters, but we could.
+             alert("数据恢复成功。系统重载完毕。");
+          }
+        } else {
+          alert("错误：无效的数据文件格式。");
+        }
+      } catch (err) {
+        console.error("Import failed", err);
+        alert("错误：无法解析数据文件。");
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    event.target.value = '';
   };
 
   useEffect(() => {
@@ -343,6 +394,30 @@ const App: React.FC = () => {
                 <p className="text-xs text-neu-text/60 font-mono">
                   当[正在进行的任务超时]，或者[系统空闲时间]超过此阈值时，将触发警报。
                 </p>
+              </div>
+
+              {/* Data Management */}
+              <div className="flex flex-col gap-4 p-4 border border-neu-dark bg-neu-dark/10">
+                <div>
+                   <h4 className="font-bold text-neu-text font-mono">数据同步 (离线模式)</h4>
+                   <p className="text-xs text-neu-text/50">手动备份或恢复您的系统数据 (JSON格式)</p>
+                </div>
+                <div className="flex gap-4">
+                  <NeuButton onClick={handleExportData} className="flex-1 flex items-center justify-center gap-2 text-sm">
+                    <Download size={16} /> 导出数据
+                  </NeuButton>
+                  <label className="flex-1">
+                    <input 
+                      type="file" 
+                      accept=".json" 
+                      className="hidden" 
+                      onChange={handleImportData} 
+                    />
+                    <div className="cursor-pointer bg-transparent border border-neu-text/50 text-neu-text hover:bg-neu-text/10 hover:border-neu-text hover:text-white transition-all font-mono uppercase tracking-wider py-2 px-4 text-sm flex items-center justify-center gap-2 h-full">
+                       <Upload size={16} /> 导入数据
+                    </div>
+                  </label>
+                </div>
               </div>
 
             </div>
